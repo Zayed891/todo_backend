@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = "GTA^";
+const JWT_SECRET = "GTA6";
 
 function auth(req,res,next){
     const token = req.headers.token;

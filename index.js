@@ -2,9 +2,11 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const mongoose = require('mongoose');
 const { UserModel, TodoModel } = require("./db");
-const auth = require('./auth');
+const {auth} = require('./auth');
+const bcrypt = require('bcrypt');
+import { z } from "zod";
 
-mongoose.connect("mongodb+srv://jayedaktar35:Zayed@891@cluster0.9l3ea.mongodb.net/");
+mongoose.connect("mongodb+srv://jayedaktar35:fMvKX7hUkHvEsdnl@cluster0.9l3ea.mongodb.net/");
 
 const app = express();
 app.use(express.json());
@@ -12,13 +14,31 @@ app.use(express.json());
 const JWT_SECRET = "GTA6";
 
 app.post('/signup', async(req,res)=>{
+    const requireBody = z.object({
+        email : z.string().min(5).max(15),
+        password : z.string().min(8).max(18),
+        name : z.string()
+    });
+    
+    const parsedData = requireBody.safeParse(req.body);
+
+    if(!parsedData.success){
+        res.json({
+            message : "Incorrect Format"
+        })
+
+        return;
+    }
+
     const email = req.body.email;
     const password = req.body.password;
-    const name = req.body.name;
+    const name = req.body.username;
+
+    const hashedPassword = bcrypt.hash(password,5)
 
     await UserModel.create({
         email : email,
-        password: password,
+        password: hashedPassword,
         name : name
     });
 
@@ -29,15 +49,30 @@ app.post('/signup', async(req,res)=>{
 })
 
 app.post('/login', async(req,res)=>{
+    const requireBody = z.object({
+        email : z.string().min(5).max(15),
+        password : z.string().min(8).max(18)
+    });
+    
+    const parsedData = requireBody.safeParse(req.body);
+
+    if(!parsedData.success){
+        res.json({
+            message : "Incorrect Format"
+        })
+
+        return;
+    }
     const email = req.body.email;
     const password = req.body.password;
 
-    const response = await UserModel.findOne({
+    const user = await UserModel.findOne({
         email : email,
-        password: password
     })
 
-    if(response){
+    const passwordMatch = bcrypt.compare(password,user.password);
+
+    if(user && passwordMatch){
         const token = jwt.sign({
             id : response._id.toString()
         },JWT_SECRET);
